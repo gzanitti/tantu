@@ -1,0 +1,6 @@
+set(LLVM_TARGET_DEFINITIONS TantuOps.td)
+mlir_tablegen(TantuDialect.h.inc   -gen-dialect-decls -dialect tantu)
+mlir_tablegen(TantuDialect.cpp.inc -gen-dialect-defs  -dialect tantu)
+mlir_tablegen(TantuOps.h.inc       -gen-op-decls      -dialect tantu)
+mlir_tablegen(TantuOps.cpp.inc     -gen-op-defs       -dialect tantu)
+add_public_tablegen_target(TantuOpsIncGen)
