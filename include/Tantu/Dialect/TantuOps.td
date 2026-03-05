@@ -2,6 +2,7 @@ include "Tantu/Dialect/TantuDialect.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/IR/CommonTypeConstraints.td"
 include "mlir/IR/BuiltinAttributes.td"
 
@@ -365,7 +366,13 @@ def Tantu_MatmulOp : Tantu_Op<"matmul", [
 // I/O operations
 
 def Tantu_PrintOp : Tantu_Op<"print", [
-  MemoryEffects<[MemWrite<DefaultResource>]>
+  MemoryEffects<[MemWrite<DefaultResource>]>,
+  DeclareOpInterfaceMethods<BufferizableOpInterface, [
+  "bufferizesToMemoryRead",
+  "bufferizesToMemoryWrite", 
+  "getAliasingValues",
+  "bufferize"
+  ]>
 ]> {
   let summary = "Print a tensor to the console";
 
@@ -376,6 +383,6 @@ def Tantu_PrintOp : Tantu_Op<"print", [
     tantu.print %a : tensor<2x2xf32>
   }];
 
-  let arguments = (ins F32Tensor:$input);
+  let arguments = (ins AnyTypeOf<[F32Tensor, AnyMemRef]>:$input);
   let assemblyFormat = "$input attr-dict `:` type($input)";
 }

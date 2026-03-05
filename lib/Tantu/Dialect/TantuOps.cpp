@@ -5,6 +5,7 @@
 
 using namespace ::mlir;
 using namespace ::tantu;
+using namespace mlir::bufferization;
 
 #define GET_OP_CLASSES
 #include "Tantu/Dialect/TantuOps.cpp.inc"
@@ -62,5 +63,29 @@ using namespace ::tantu;
            << lhsType.getShape() << " and " << rhsType.getShape() << " -> "
            << resultType.getShape();
 
+  return success();
+}
+bool PrintOp::bufferizesToMemoryRead(OpOperand &opOperand,
+                                     const AnalysisState &state) {
+  return true;
+}
+
+bool PrintOp::bufferizesToMemoryWrite(OpOperand &opOperand,
+                                      const AnalysisState &state) {
+  return false;
+}
+
+AliasingValueList PrintOp::getAliasingValues(OpOperand &opOperand,
+                                             const AnalysisState &state) {
+  return {};
+}
+
+LogicalResult PrintOp::bufferize(RewriterBase &rewriter,
+                                 const BufferizationOptions &options) {
+  FailureOr<Value> inputBuf = getBuffer(rewriter, getInput(), options);
+  if (failed(inputBuf))
+    return failure();
+
+  rewriter.replaceOpWithNewOp<PrintOp>(getOperation(), *inputBuf);
   return success();
 }

@@ -10,6 +10,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_mlir_library(TantuTransforms
   LowerToLinalg.cpp
+  LowerTantuPrint.cpp
   DEPENDS
     TantuTransformsIncGen
   LINK_LIBS PUBLIC

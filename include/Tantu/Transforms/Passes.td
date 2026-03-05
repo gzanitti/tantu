@@ -11,3 +11,11 @@ def TantuToLinalgPass : Pass<"convert-tantu-to-linalg", "mlir::ModuleOp"> {
     "mlir::memref::MemRefDialect"
   ];
 }
+
+def LowerTantuPrintPass : Pass<"lower-tantu-print", "mlir::ModuleOp"> {
+  let summary = "Lower tantu.print to printMemrefF32 runtime call";
+  let dependentDialects = [
+    "mlir::func::FuncDialect",
+    "mlir::memref::MemRefDialect"
+  ];
+}
