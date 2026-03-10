@@ -1,0 +1,15 @@
+Constraint isElementwise(op: Op);
+Rewrite fuseGenerics(op1: Op, op2: Op) -> Op;
+
+Pattern FuseElementwise with benefit(1) {
+  let op1 = op<linalg.generic>(a: Value, b: Value, _: Value);
+  let op2 = op<linalg.generic>(op1.0, _: Value);
+  isElementwise(op1);
+  isElementwise(op2);
+
+  rewrite op2 with {
+    let fused = fuseGenerics(op1, op2);
+    replace op2 with fused;
+    erase op1;
+  };
+}

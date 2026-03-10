@@ -19,3 +19,7 @@ def LowerTantuPrintPass : Pass<"lower-tantu-print", "mlir::ModuleOp"> {
     "mlir::memref::MemRefDialect"
   ];
 }
+
+def FuseElementwisePass : Pass<"fuse-elementwise", "mlir::ModuleOp"> {
+  let summary = "Fuse elementwise operations into a single operation";
+}
