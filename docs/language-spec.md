@@ -27,15 +27,15 @@ Tensors are the primary data structure. Their type encodes both the element type
 the full static shape:
 
 ```
-tensor<D0 x D1 x ... x Dn x dtype>
+tensor<D0 , D1 , ... , Dn>
 ```
 
 Examples:
 
 ```
-tensor<4x4xf32>    -- 4x4 matrix of f32
-tensor<8xf32>      -- vector of 8 f32 elements
-tensor<2x3x4xf32>  -- rank-3 tensor
+tensor<4,4>      -- 4x4 matrix of f32
+tensor<8>        -- vector of 8 f32 elements
+tensor<2,3,4>    -- rank-3 tensor of f32
 ```
 
 Tensors have value semantics — they are immutable. Operations produce new tensors
@@ -99,8 +99,12 @@ There is no explicit `return` keyword.
 
 ```
 expression ::= call_expression
+             | tensor_expression
              | identifier
              | scalar_literal
+
+tensor_expression ::= 'tensor' '<' shape '>' '(' (scalar_literal (',' scalar_literal)*)? ')'
+shape             ::= integer_literal (',' integer_literal)*
 ```
 
 All operations are expressed as function calls. There are no binary operators.
@@ -124,18 +128,18 @@ scalar (the scalar is applied uniformly to all elements).
 
 | Operation          | Signature                                         | Description                       |
 |--------------------|---------------------------------------------------|-----------------------------------|
-| `add(a, b)`        | `tensor<Sxf32>, tensor<Sxf32> -> tensor<Sxf32>`  | Elementwise addition              |
-| `sub(a, b)`        | `tensor<Sxf32>, tensor<Sxf32> -> tensor<Sxf32>`  | Elementwise subtraction           |
-| `mul(a, b)`        | `tensor<Sxf32>, tensor<Sxf32> -> tensor<Sxf32>`  | Elementwise multiplication        |
-| `div(a, b)`        | `tensor<Sxf32>, tensor<Sxf32> -> tensor<Sxf32>`  | Elementwise division              |
-| `neg(a)`           | `tensor<Sxf32> -> tensor<Sxf32>`                  | Elementwise negation              |
-| `exp(a)`           | `tensor<Sxf32> -> tensor<Sxf32>`                  | Elementwise exponential           |
-| `max(a, b)`        | `tensor<Sxf32>, tensor<Sxf32> -> tensor<Sxf32>`  | Elementwise maximum               |
-| `add_scalar(a, s)` | `tensor<Sxf32>, f32 -> tensor<Sxf32>`            | Add scalar to all elements        |
-| `sub_scalar(a, s)` | `tensor<Sxf32>, f32 -> tensor<Sxf32>`            | Subtract scalar from all elements |
-| `mul_scalar(a, s)` | `tensor<Sxf32>, f32 -> tensor<Sxf32>`            | Multiply all elements by scalar   |
-| `div_scalar(a, s)` | `tensor<Sxf32>, f32 -> tensor<Sxf32>`            | Divide all elements by scalar     |
-| `max_scalar(a, s)` | `tensor<Sxf32>, f32 -> tensor<Sxf32>`            | Elementwise max with scalar       |
+| `add(a, b)`        | `tensor<S>, tensor<S> -> tensor<S>`  | Elementwise addition              |
+| `sub(a, b)`        | `tensor<S>, tensor<S> -> tensor<S>`  | Elementwise subtraction           |
+| `mul(a, b)`        | `tensor<S>, tensor<S> -> tensor<S>`  | Elementwise multiplication        |
+| `div(a, b)`        | `tensor<S>, tensor<S> -> tensor<S>`  | Elementwise division              |
+| `neg(a)`           | `tensor<S> -> tensor<S>`                  | Elementwise negation              |
+| `e,p(a)`           | `tensor<S> -> tensor<S>`                  | Elementwise exponential           |
+| `max(a, b)`        | `tensor<S>, tensor<S> -> tensor<S>`  | Elementwise maximum               |
+| `add_scalar(a, s)` | `tensor<S>, f32 -> tensor<S>`            | Add scalar to all elements        |
+| `sub_scalar(a, s)` | `tensor<S>, f32 -> tensor<S>`            | Subtract scalar from all elements |
+| `mul_scalar(a, s)` | `tensor<S>, f32 -> tensor<S>`            | Multiply all elements by scalar   |
+| `div_scalar(a, s)` | `tensor<S>, f32 -> tensor<S>`            | Divide all elements by scalar     |
+| `max_scalar(a, s)` | `tensor<S>, f32 -> tensor<S>`            | Elementwise max with scalar       |
 
 Where `S` denotes an arbitrary static shape that must be identical for both operands
 in the tensor-tensor variants.
@@ -146,9 +150,9 @@ Reduce a tensor along all dimensions to a scalar.
 
 | Operation       | Signature              | Description               |
 |-----------------|------------------------|---------------------------|
-| `sum(a)`        | `tensor<Sxf32> -> f32` | Sum of all elements       |
-| `max_reduce(a)` | `tensor<Sxf32> -> f32` | Maximum element           |
-| `size(a)`       | `tensor<S x ?> -> i32` | Total number of elements  |
+| `sum(a)`        | `tensor<S> -> f32` | Sum of all elements       |
+| `max_reduce(a)` | `tensor<S> -> f32` | Maximum element           |
+| `size(a)`       | `tensor<S> -> i32`     | Total number of elements  |
 
 `max_reduce` is named explicitly to avoid ambiguity with the elementwise `max`.
 `size` returns the total number of elements as `i32` and works on tensors of any
@@ -158,8 +162,8 @@ element type.
 
 | Operation                | Signature                                                        | Description                     |
 |--------------------------|------------------------------------------------------------------|---------------------------------|
-| `matmul(a, b)`           | `tensor<MxKxf32>, tensor<KxNxf32> -> tensor<MxNxf32>`           | Matrix multiply                 |
-| `transpose(a, perm)`     | `tensor<D0x...xDnxf32>, [i64] -> tensor<permuted_shape xf32>`   | Permute tensor dimensions       |
+| `matmul(a, b)`           | `tensor<M,K>, tensor<K,N> -> tensor<M,N>`           | Matrix multiply                 |
+| `transpose(a, perm)`     | `tensor<D0,...,Dn>, [i64] -> tensor<permuted_shape>` | Permute tensor dimensions       |
 
 `perm` is an array of integers specifying the permutation of dimensions. It must be
 a valid permutation of `[0, 1, ..., rank-1]` where `rank` is the rank of `a`.
@@ -180,12 +184,25 @@ and `f32`.
 
 | Operation   | Signature                  | Description                        |
 |-------------|----------------------------|------------------------------------|
-| `print(a)`  | `tensor<Sxf32> -> ()`      | Print tensor contents to stdout    |
+| `print(a)`  | `tensor<S> -> ()`      | Print tensor contents to stdout    |
 
 `print` is a side-effecting operation — it is the only operation in Tantu that
 produces a side effect. It is intended for debugging and result inspection.
 Because it has side effects, it must not be marked `Pure` and must not be
 eliminated by dead code elimination passes.
+
+### 4.6 Tensor Construction
+
+| Operation | Signature | Description |
+|---|---|---|
+| `tensor<S>(e0, e1, ..., en)` | `f32,... -> tensor<S>` | Construct a tensor from scalar literals |
+
+`S` is a static shape (e.g. `3x2`, `4x4x4`). The number of arguments must equal
+the total number of elements in the shape. Element type is inferred from the literals
+and must be uniform across all arguments.
+
+Example:
+    tensor<2,3>(1.0, 2.0, 3.0, 4.0, 5.0, 6.0)
 
 ---
 
@@ -202,7 +219,8 @@ The following are compile-time errors:
 - The type of the return expression must match the declared return type.
 - Scalar literals cannot be passed where a tensor is expected, except in the
   scalar variants of elementwise operations.
-
+- `tensor<S>(e0, ..., en)`: the number of arguments must equal the total number of elements in S.
+- All arguments to a tensor construction must be scalar literals of uniform type.
 ---
 
 ## 6. Derived Operations
@@ -211,14 +229,14 @@ The following common operations are not primitives but can be expressed in Tantu
 
 **ReLU**
 ```
-fn relu(x: tensor<4xf32>) -> tensor<4xf32> {
+fn relu(x: tensor<4>) -> tensor<4> {
     max_scalar(x, 0.0)
 }
 ```
 
 **Mean**
 ```
-fn mean(x: tensor<4xf32>) -> f32 {
+fn mean(x: tensor<4>) -> f32 {
     let total = sum(x);
     let n     = cast(size(x), f32);
     div_scalar(total, n)
@@ -227,7 +245,7 @@ fn mean(x: tensor<4xf32>) -> f32 {
 
 **Softmax**
 ```
-fn softmax(x: tensor<8xf32>) -> tensor<8xf32> {
+fn softmax(x: tensor<8>) -> tensor<8> {
     let m       = max_reduce(x);
     let shifted = sub_scalar(x, m);
     let exps    = exp(shifted);
@@ -238,7 +256,7 @@ fn softmax(x: tensor<8xf32>) -> tensor<8xf32> {
 
 **Swap batch and sequence dimensions (rank-3 example)**
 ```
-fn swap_batch_seq(x: tensor<4x8x16xf32>) -> tensor<8x4x16xf32> {
+fn swap_batch_seq(x: tensor<4,8,16>) -> tensor<8,4,16> {
     transpose(x, [1, 0, 2])
 }
 ```

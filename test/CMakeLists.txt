@@ -1,3 +1,5 @@
+add_subdirectory(Frontend)
+
 find_program(LLVM_LIT lit)
 if(NOT LLVM_LIT)
   message(WARNING "lit not found, tests will not be available")
@@ -14,3 +16,4 @@ add_custom_target(check-tantu
   DEPENDS tantu-opt
   COMMENT "Running Tantu tests"
 )
+
