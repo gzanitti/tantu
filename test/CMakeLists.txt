@@ -1,4 +1,5 @@
 add_subdirectory(Frontend)
+add_subdirectory(Sema)
 
 find_program(LLVM_LIT lit)
 if(NOT LLVM_LIT)

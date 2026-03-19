@@ -29,7 +29,7 @@ using namespace mlir::bufferization;
     return emitOpError("unsupported permutation size ")
            << perm.size() << " and " << inputType.getRank();
 
-  llvm::SmallSet<int32_t, 4> seen;
+  llvm::SmallSet<int64_t, 8> seen;
   for (int64_t i = 0; i < (int64_t)perm.size(); i++) {
     int64_t val = llvm::cast<IntegerAttr>(perm[i]).getInt();
     if (val < 0 || val >= inputType.getRank())

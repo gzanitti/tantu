@@ -270,6 +270,24 @@ TEST(ParserTest, TwoFunctions) {
             ")\n");
 }
 
+TEST(ParserTest, TransposeWithPermutation) {
+  ASSERT_EQ(
+      parseAndPrint(
+          "fn swap_batch_seq(x: tensor<4,8,16>) -> tensor<8,4,16> {"
+          "  transpose(x, [1, 0, 2])"
+          "}"),
+      "Program(\n"
+      "FunctionDef(swap_batch_seq \n"
+      "  Params: Param(x : Tensor<4x8x16>)\n"
+      "  Body:   Return: transpose(x, Permutation(1 , 0 , 2 )) : Tensor<8x4x16>)\n"
+      ")\n");
+}
+
+TEST(ParserTest, ErrorPermutationNonInteger) {
+  ASSERT_TRUE(parseFails(
+      "fn f(x: tensor<4,4>) -> tensor<4,4> { transpose(x, [0, x]) }"));
+}
+
 TEST(ParserTest, ErrorBareNumberAtTopLevel) { ASSERT_TRUE(parseFails("42")); }
 
 TEST(ParserTest, ErrorEmptyFunctionBody) {

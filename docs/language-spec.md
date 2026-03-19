@@ -133,7 +133,7 @@ scalar (the scalar is applied uniformly to all elements).
 | `mul(a, b)`        | `tensor<S>, tensor<S> -> tensor<S>`  | Elementwise multiplication        |
 | `div(a, b)`        | `tensor<S>, tensor<S> -> tensor<S>`  | Elementwise division              |
 | `neg(a)`           | `tensor<S> -> tensor<S>`                  | Elementwise negation              |
-| `e,p(a)`           | `tensor<S> -> tensor<S>`                  | Elementwise exponential           |
+| `exp(a)`           | `tensor<S> -> tensor<S>`                  | Elementwise exponential           |
 | `max(a, b)`        | `tensor<S>, tensor<S> -> tensor<S>`  | Elementwise maximum               |
 | `add_scalar(a, s)` | `tensor<S>, f32 -> tensor<S>`            | Add scalar to all elements        |
 | `sub_scalar(a, s)` | `tensor<S>, f32 -> tensor<S>`            | Subtract scalar from all elements |
@@ -175,7 +175,7 @@ shape `[D_p0, D_p1, ..., D_pn]`.
 
 | Operation        | Signature               | Description                  |
 |------------------|-------------------------|------------------------------|
-| `cast(a, type)`  | `i32 -> f32`            | Convert `i32` scalar to `f32`|
+| `cast(a)`  | `i32 -> f32`            | Convert `i32` scalar to `f32`|
 
 Type conversions are always explicit. There are no implicit coercions between `i32`
 and `f32`.
@@ -231,15 +231,6 @@ The following common operations are not primitives but can be expressed in Tantu
 ```
 fn relu(x: tensor<4>) -> tensor<4> {
     max_scalar(x, 0.0)
-}
-```
-
-**Mean**
-```
-fn mean(x: tensor<4>) -> f32 {
-    let total = sum(x);
-    let n     = cast(size(x), f32);
-    div_scalar(total, n)
 }
 ```
 

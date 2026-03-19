@@ -72,31 +72,6 @@ void PrettyPrinter::visit(TensorType &type) {
   std::cout << ">";
 }
 
-static const char *builtinOpName(BuiltinOp op) {
-  switch (op) {
-  case Add:        return "add";
-  case Sub:        return "sub";
-  case Mul:        return "mul";
-  case Div:        return "div";
-  case Max:        return "max";
-  case Exp:        return "exp";
-  case Neg:        return "neg";
-  case AddScalar:  return "add_scalar";
-  case SubScalar:  return "sub_scalar";
-  case MulScalar:  return "mul_scalar";
-  case DivScalar:  return "div_scalar";
-  case MaxScalar:  return "max_scalar";
-  case Sum:        return "sum";
-  case MaxReduce:  return "max_reduce";
-  case Size:       return "size";
-  case Cast:       return "cast";
-  case Transpose:  return "transpose";
-  case Matmul:     return "matmul";
-  case Print:      return "print";
-  }
-  return "unknown";
-}
-
 void PrettyPrinter::visit(CallExpr &expr) {
   if (expr.builtinOp)
     std::cout << builtinOpName(*expr.builtinOp) << "(";
@@ -126,4 +101,14 @@ void PrettyPrinter::visit(TensorExpr &expr) {
     expr.values[i]->accept(*this);
   }
   std::cout << "]";
+}
+
+void PrettyPrinter::visit(PermutationExpr &expr) {
+  std::cout << "Permutation(";
+  for (size_t i = 0; i < expr.values.size(); ++i) {
+    if (i > 0)
+      std::cout << ", ";
+    std::cout << expr.values[i] << " ";
+  }
+  std::cout << ")";
 }

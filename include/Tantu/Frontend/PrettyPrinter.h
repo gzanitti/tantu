@@ -5,6 +5,7 @@ public:
   void visit(LetBinding &stmt) override;
   void visit(Param &param) override;
   void visit(IdentifierExpr &expr) override;
+  void visit(PermutationExpr &expr) override;
   void visit(ScalarLiteralExpr &expr) override;
   void visit(TensorType &type) override;
   void visit(ScalarType &type) override;

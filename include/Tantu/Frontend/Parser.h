@@ -25,6 +25,7 @@ private:
   llvm::Expected<std::unique_ptr<LetBinding>> parseLetBinding();
   llvm::Expected<Param> parseParam();
   llvm::Expected<std::unique_ptr<ScalarLiteralExpr>> parseScalarLiteralExpr();
+  llvm::Expected<std::unique_ptr<PermutationExpr>> parsePermutationExpr();
   llvm::Expected<std::unique_ptr<Type>> parseType();
   llvm::Expected<std::unique_ptr<TensorType>> parseTensorType();
   llvm::Expected<std::unique_ptr<ScalarType>> parseScalarType();

@@ -2,6 +2,7 @@
 #include "Tantu/Frontend/AST.h"
 #include "Tantu/Frontend/Lexer.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
 #include <memory>
 
 Parser::Parser(Lexer lexer)
@@ -175,13 +176,13 @@ llvm::Expected<std::unique_ptr<TensorType>> Parser::parseTensorType() {
   if (!leftAngleTok)
     return leftAngleTok.takeError();
 
-  std::vector<int> shape;
+  std::vector<int64_t> shape;
   next(); // consume '<'
   while (current.kind != RIGHT_ANGLE) {
     if (current.kind != NUMBER)
       return makeError("expected number in tensor shape, got '" +
                        std::string(tokenKindName(current.kind)) + "'");
-    shape.push_back(std::stoi(std::string(current.getValue())));
+    shape.push_back(std::stoll(std::string(current.getValue())));
     next(); // consume number
     if (current.kind == COMMA) {
       next();
@@ -253,51 +254,14 @@ llvm::Expected<std::unique_ptr<IdentifierExpr>> Parser::parseIdentifierExpr() {
 
 llvm::Expected<std::unique_ptr<ScalarLiteralExpr>>
 Parser::parseScalarLiteralExpr() {
-  double value = std::stod(std::string(current.getValue()));
+  auto value = current.getValue();
   next();
-  return std::make_unique<ScalarLiteralExpr>(value);
-}
-
-static std::optional<BuiltinOp> getBuiltinOp(std::string_view name) {
-  if (name == "add")
-    return Add;
-  if (name == "sub")
-    return Sub;
-  if (name == "mul")
-    return Mul;
-  if (name == "div")
-    return Div;
-  if (name == "max")
-    return Max;
-  if (name == "exp")
-    return Exp;
-  if (name == "neg")
-    return Neg;
-  if (name == "add_scalar")
-    return AddScalar;
-  if (name == "sub_scalar")
-    return SubScalar;
-  if (name == "mul_scalar")
-    return MulScalar;
-  if (name == "div_scalar")
-    return DivScalar;
-  if (name == "max_scalar")
-    return MaxScalar;
-  if (name == "sum")
-    return Sum;
-  if (name == "max_reduce")
-    return MaxReduce;
-  if (name == "size")
-    return Size;
-  if (name == "cast")
-    return Cast;
-  if (name == "transpose")
-    return Transpose;
-  if (name == "matmul")
-    return Matmul;
-  if (name == "print")
-    return Print;
-  return std::nullopt;
+  if (value.find('.') != std::string::npos)
+    return std::make_unique<ScalarLiteralExpr>(std::stod(std::string(value)),
+                                               ScalarKind::Float);
+  else
+    return std::make_unique<ScalarLiteralExpr>(std::stod(std::string(value)),
+                                               ScalarKind::Integer);
 }
 
 llvm::Expected<std::unique_ptr<CallExpr>>
@@ -323,12 +287,12 @@ llvm::Expected<std::unique_ptr<TensorExpr>> Parser::parseTensorExpr() {
     return leftAngle.takeError();
   next(); // consume '<'
 
-  std::vector<int> shape;
+  std::vector<int64_t> shape;
   while (current.kind != RIGHT_ANGLE) {
     if (current.kind != NUMBER)
       return makeError("expected number in tensor shape, got '" +
                        std::string(tokenKindName(current.kind)) + "'");
-    shape.push_back(std::stoi(std::string(current.getValue())));
+    shape.push_back(std::stoll(std::string(current.getValue())));
     next(); // consume NUMBER
     if (current.kind == COMMA)
       next();
@@ -343,8 +307,13 @@ llvm::Expected<std::unique_ptr<TensorExpr>> Parser::parseTensorExpr() {
     if (current.kind != NUMBER)
       return makeError("expected number in tensor values, got '" +
                        std::string(tokenKindName(current.kind)) + "'");
-    values.push_back(std::make_unique<ScalarLiteralExpr>(
-        std::stod(std::string(current.getValue()))));
+    auto value = current.getValue();
+    if (value.find('.') != std::string::npos)
+      values.push_back(std::make_unique<ScalarLiteralExpr>(
+          std::stod(std::string(value)), ScalarKind::Float));
+    else
+      values.push_back(std::make_unique<ScalarLiteralExpr>(
+          std::stod(std::string(value)), ScalarKind::Integer));
     next(); // consume NUMBER
     if (current.kind == COMMA)
       next();
@@ -353,12 +322,31 @@ llvm::Expected<std::unique_ptr<TensorExpr>> Parser::parseTensorExpr() {
   return std::make_unique<TensorExpr>(shape, std::move(values));
 }
 
+llvm::Expected<std::unique_ptr<PermutationExpr>>
+Parser::parsePermutationExpr() {
+  next(); // consume '['
+  std::vector<size_t> values;
+  while (current.kind != RIGHT_BRACKET) {
+    if (current.kind != NUMBER)
+      return makeError("expected integer in permutation, got '" +
+                       std::string(tokenKindName(current.kind)) + "'");
+    values.push_back(std::stoull(std::string(current.getValue())));
+    next(); // consume number
+    if (current.kind == COMMA)
+      next();
+  }
+  next(); // consume ']'
+  return std::make_unique<PermutationExpr>(std::move(values));
+}
+
 llvm::Expected<std::unique_ptr<Expression>> Parser::parseExpression() {
   switch (current.kind) {
   case TENSOR:
     return parseTensorExpr();
   case NUMBER:
     return parseScalarLiteralExpr();
+  case LEFT_BRACKET:
+    return parsePermutationExpr();
   case IDENTIFIER: {
     std::string name = std::string(current.getValue());
     next(); // consume identifier

@@ -1,33 +1,45 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 class Visitor;
 
+enum TypeKind { Scalar, Tensor };
+
 class Type {
 public:
+  Type(TypeKind kind) : kind(kind) {}
   virtual void accept(Visitor &visitor) = 0;
+  virtual std::string toString() const = 0;
   virtual ~Type() = default;
+  TypeKind kind;
 };
 
 enum ScalarKind { Integer, Float };
 
 class ScalarType : public Type {
 public:
-  ScalarType(ScalarKind kind) : kind(kind) {}
+  ScalarType(ScalarKind kind) : Type(TypeKind::Scalar), kind(kind) {}
   ScalarKind kind;
   void accept(Visitor &visitor) override;
+  std::string toString() const override;
+  bool operator==(const ScalarType &other) const;
 };
 
 class TensorType : public Type {
 public:
-  TensorType(std::vector<int> shape) : shape(shape) {}
-  std::vector<int> shape;
+  TensorType(std::vector<int64_t> shape)
+      : Type(TypeKind::Tensor), shape(shape) {}
+  std::vector<int64_t> shape;
   void accept(Visitor &visitor) override;
+  std::string toString() const override;
+  bool operator==(const TensorType &other) const;
 };
 
 class Statement {
@@ -40,13 +52,15 @@ class Expression {
 public:
   virtual void accept(Visitor &visitor) = 0;
   virtual ~Expression() = default;
+  Type *inferredType = nullptr;
 };
 
 
 class ScalarLiteralExpr : public Expression {
 public:
-  ScalarLiteralExpr(double value) : value(value) {}
+  ScalarLiteralExpr(double value, ScalarKind kind) : value(value), kind(kind) {}
   double value;
+  ScalarKind kind;
   void accept(Visitor &visitor) override;
 };
 
@@ -55,6 +69,13 @@ public:
   IdentifierExpr(std::string name) : name(name) {}
   const std::string &getName() const { return name; }
   std::string name;
+  void accept(Visitor &visitor) override;
+};
+
+class PermutationExpr : public Expression {
+public:
+  PermutationExpr(std::vector<size_t> values) : values(values) {}
+  std::vector<size_t> values;
   void accept(Visitor &visitor) override;
 };
 
@@ -98,6 +119,9 @@ enum BuiltinOp {
   Print
 };
 
+const char *builtinOpName(BuiltinOp op);
+std::optional<BuiltinOp> getBuiltinOp(std::string_view name);
+
 class CallExpr : public Expression {
 public:
   CallExpr(IdentifierExpr callee, std::vector<std::unique_ptr<Expression>> args,
@@ -111,10 +135,10 @@ public:
 
 class TensorExpr : public Expression {
 public:
-  TensorExpr(std::vector<int> shape,
+  TensorExpr(std::vector<int64_t> shape,
              std::vector<std::unique_ptr<ScalarLiteralExpr>> values)
       : shape(shape), values(std::move(values)) {}
-  std::vector<int> shape;
+  std::vector<int64_t> shape;
   std::vector<std::unique_ptr<ScalarLiteralExpr>> values;
   void accept(Visitor &visitor) override;
 };
@@ -170,6 +194,7 @@ public:
   virtual ~Visitor() = default;
   virtual void visit(LetBinding &stmt) = 0;
   virtual void visit(Param &param) = 0;
+  virtual void visit(PermutationExpr &expr) = 0;
   virtual void visit(IdentifierExpr &expr) = 0;
   virtual void visit(ScalarLiteralExpr &expr) = 0;
   virtual void visit(TensorType &type) = 0;
