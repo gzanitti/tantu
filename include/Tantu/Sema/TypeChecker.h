@@ -5,6 +5,7 @@
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 struct VectorHash {
@@ -25,9 +26,24 @@ private:
       tensorTypes;
 };
 
+struct VariableSymbol {
+  VariableSymbol(Type *type) : type(type){};
+  //~VariableSymbol();
+  Type *type;
+};
+
+struct FunctionSymbol {
+  FunctionSymbol(Type *returnType, std::vector<Type *> params)
+      : returnType(returnType), params(params){};
+  //~FunctionSymbol();
+  Type *returnType;
+  std::vector<Type *> params;
+};
+
 class TypeChecker : public Visitor {
   TypeContext context;
-  std::unordered_map<std::string, Type *> symbol_table;
+  std::unordered_map<std::string, std::variant<VariableSymbol, FunctionSymbol>>
+      symbol_table;
   std::unordered_map<
       std::string,
       std::function<Type *(std::vector<Expression *> &, TypeContext &,

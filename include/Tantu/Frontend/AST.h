@@ -165,6 +165,7 @@ public:
   std::unique_ptr<Expression> returnExpr;
   std::unique_ptr<Type> returnType;
   void accept(Visitor &visitor) override;
+  const std::string &getName() const { return name; }
 };
 
 class ConstDef : public Definition {

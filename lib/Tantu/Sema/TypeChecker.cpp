@@ -3,6 +3,7 @@
 #include "llvm/Support/Error.h"
 #include <iostream>
 #include <set>
+#include <variant>
 #include <vector>
 
 static size_t hash_combine(size_t seed, const int64_t elem) {
@@ -312,19 +313,23 @@ void TypeChecker::visit(ConstDef &stmt) {
   if (stmt.type->kind == TypeKind::Scalar) {
     auto scalarType = static_cast<ScalarType *>(stmt.type.get());
     auto scalar = context.lookup(scalarType->kind);
-    symbol_table[stmt.name] = scalar;
+    symbol_table.insert_or_assign(stmt.name, VariableSymbol(scalar));
   } else if (stmt.type->kind == TypeKind::Tensor) {
     auto tensorType = static_cast<TensorType *>(stmt.type.get());
     auto tensor = context.lookup(tensorType->shape);
-    symbol_table[stmt.name] = tensor;
+    symbol_table.insert_or_assign(stmt.name, VariableSymbol(tensor));
   }
 }
 
 void TypeChecker::visit(FunctionDef &stmt) {
+  if (symbol_table.count(stmt.getName())) {
+    errors.push_back("Redefinition of '" + stmt.getName() + "'");
+    return;
+  }
+  std::vector<Type *> params;
   for (auto &param : stmt.params) {
-    std::cout << "Checking parameter: " << param.identifier.getName()
-              << std::endl;
     param.accept(*this);
+    params.push_back(canonalize(param.type.get()));
   }
   for (const auto &stmt : stmt.body) {
     stmt->accept(*this);
@@ -338,6 +343,8 @@ void TypeChecker::visit(FunctionDef &stmt) {
                        stmt.returnType->toString() +
                        ", got: " + stmt.returnExpr->inferredType->toString());
     }
+    symbol_table.insert_or_assign(stmt.getName(),
+                                  FunctionSymbol(returnType, params));
   }
 }
 
@@ -345,11 +352,13 @@ void TypeChecker::visit(Param &param) {
   if (param.type->kind == TypeKind::Scalar) {
     auto scalarType = static_cast<ScalarType *>(param.type.get());
     auto scalar = context.lookup(scalarType->kind);
-    symbol_table[param.identifier.getName()] = scalar;
+    symbol_table.insert_or_assign(param.identifier.getName(),
+                                  VariableSymbol(scalar));
   } else if (param.type->kind == TypeKind::Tensor) {
     auto tensorType = static_cast<TensorType *>(param.type.get());
     auto tensor = context.lookup(tensorType->shape);
-    symbol_table[param.identifier.getName()] = tensor;
+    symbol_table.insert_or_assign(param.identifier.getName(),
+                                  VariableSymbol(tensor));
   }
 }
 
@@ -359,12 +368,15 @@ void TypeChecker::visit(LetBinding &stmt) {
     return;
   }
   stmt.expr->accept(*this);
-  symbol_table[stmt.identifier.getName()] = stmt.expr->inferredType;
+  VariableSymbol vs = VariableSymbol(stmt.expr->inferredType);
+  symbol_table.insert_or_assign(stmt.identifier.getName(), vs);
 }
 
 void TypeChecker::visit(IdentifierExpr &expr) {
-  if (symbol_table.find(expr.getName()) != symbol_table.end()) {
-    expr.inferredType = symbol_table[expr.getName()];
+  if (symbol_table.find(expr.getName()) != symbol_table.end() &&
+      std::holds_alternative<VariableSymbol>(symbol_table.at(expr.getName()))) {
+    expr.inferredType =
+        std::get<VariableSymbol>(symbol_table.at(expr.getName())).type;
   } else {
     errors.push_back("Undefined identifier: " + expr.getName());
   }
@@ -396,11 +408,33 @@ void TypeChecker::visit(CallExpr &expr) {
   if (!errors.empty())
     return;
 
-  // TODO: resolve user-defined function calls, only builtins are supported now
-  // See TypeCheckerTest.TwoFunctions [  FAILED  ]
-
-  expr.inferredType =
-      builtin_descriptors[expr.callee.getName()](args, context, errors);
+  const std::string &callee = expr.callee.getName();
+  if (builtin_descriptors.find(callee) != builtin_descriptors.end()) {
+    expr.inferredType = builtin_descriptors[callee](args, context, errors);
+  } else if (symbol_table.find(callee) != symbol_table.end()) {
+    auto &sym = symbol_table.at(callee);
+    if (!std::holds_alternative<FunctionSymbol>(sym)) {
+      errors.push_back("'" + callee + "' is not a function");
+      return;
+    }
+    auto &func = std::get<FunctionSymbol>(sym);
+    if (args.size() != func.params.size()) {
+      errors.push_back("Function '" + callee + "' expects " +
+                       std::to_string(func.params.size()) +
+                       " arguments but got " + std::to_string(args.size()));
+      return;
+    }
+    for (size_t i = 0; i < args.size(); ++i) {
+      if (args[i]->inferredType != func.params[i]) {
+        errors.push_back("Argument " + std::to_string(i) + " of '" + callee +
+                         "' has wrong type");
+        return;
+      }
+    }
+    expr.inferredType = func.returnType;
+  } else {
+    errors.push_back("Unknown function '" + callee + "'");
+  }
 }
 
 void TypeChecker::visit(TensorType &type) {}
