@@ -1,4 +1,5 @@
 include "Tantu/Dialect/TantuDialect.td"
+include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -29,6 +30,26 @@ def Tantu_ConstantOp : Tantu_Op<"constant", [
 
   let arguments = (ins TypedAttrInterface:$value);
   let results = (outs AnyType:$result);
+  let hasVerifier = 1;
+  let assemblyFormat = "attr-dict $value";
+}
+
+def Tantu_TensorLiteralOp : Tantu_Op<"tensor_literal", [
+  Pure,
+  ConstantLike,
+  AllTypesMatch<["value", "result"]>
+]> {
+  let summary = "Produce a tensor constant value";
+
+  let description = [{
+    Produces a tensor constant of f32 type.
+
+    Examples:
+      %0 = tantu.tensor_literal dense<[1.0, 2.0, 3.0]> : tensor<3xf32>
+  }];
+
+  let arguments = (ins FloatElementsAttr<32>:$value);
+  let results = (outs AnyStaticShapeTensor:$result);
   let hasVerifier = 1;
   let assemblyFormat = "attr-dict $value";
 }

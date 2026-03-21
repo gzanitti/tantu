@@ -20,6 +20,17 @@ using namespace mlir::bufferization;
   return success();
 }
 
+::mlir::LogicalResult TensorLiteralOp::verify() {
+  auto inputType = llvm::cast<RankedTensorType>(getValue().getType());
+  auto elemType = inputType.getElementType();
+
+  if (!elemType.isF32())
+    return emitOpError("unsupported tensor literal type ")
+           << elemType << "; expected f32";
+
+  return success();
+}
+
 ::mlir::LogicalResult TransposeOp::verify() {
   auto inputType = llvm::cast<RankedTensorType>(getInput().getType());
   auto perm = getPerm();

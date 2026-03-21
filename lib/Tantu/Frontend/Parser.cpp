@@ -76,7 +76,8 @@ llvm::Expected<std::unique_ptr<ConstDef>> Parser::parseConstDef() {
   auto numTok = expect_next(NUMBER);
   if (!numTok)
     return numTok.takeError();
-  int value = std::stoi(std::string(numTok->getValue()));
+  ScalarLiteralExpr value =
+      ScalarLiteralExpr(std::stod(std::string(numTok->getValue())), type->kind);
 
   auto semiTok = expect_next(SEMICOLON);
   if (!semiTok)

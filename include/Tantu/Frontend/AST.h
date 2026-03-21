@@ -48,17 +48,27 @@ public:
   virtual ~Statement() = default;
 };
 
+enum ExpressionKind {
+  ScalarLiteral,
+  Identifier,
+  Permutation,
+  Call,
+  TensorKind
+};
+
 class Expression {
 public:
+  Expression(ExpressionKind kind) : kind(kind){};
   virtual void accept(Visitor &visitor) = 0;
   virtual ~Expression() = default;
+  ExpressionKind kind;
   Type *inferredType = nullptr;
 };
 
-
 class ScalarLiteralExpr : public Expression {
 public:
-  ScalarLiteralExpr(double value, ScalarKind kind) : value(value), kind(kind) {}
+  ScalarLiteralExpr(double value, ScalarKind kind)
+      : Expression(ExpressionKind::ScalarLiteral), value(value), kind(kind) {}
   double value;
   ScalarKind kind;
   void accept(Visitor &visitor) override;
@@ -66,7 +76,8 @@ public:
 
 class IdentifierExpr : public Expression {
 public:
-  IdentifierExpr(std::string name) : name(name) {}
+  IdentifierExpr(std::string name)
+      : Expression(ExpressionKind::Identifier), name(name) {}
   const std::string &getName() const { return name; }
   std::string name;
   void accept(Visitor &visitor) override;
@@ -74,7 +85,8 @@ public:
 
 class PermutationExpr : public Expression {
 public:
-  PermutationExpr(std::vector<size_t> values) : values(values) {}
+  PermutationExpr(std::vector<size_t> values)
+      : Expression(ExpressionKind::Permutation), values(values) {}
   std::vector<size_t> values;
   void accept(Visitor &visitor) override;
 };
@@ -126,7 +138,8 @@ class CallExpr : public Expression {
 public:
   CallExpr(IdentifierExpr callee, std::vector<std::unique_ptr<Expression>> args,
            std::optional<BuiltinOp> builtinOp)
-      : callee(callee), args(std::move(args)), builtinOp(builtinOp) {}
+      : Expression(ExpressionKind::Call), callee(callee), args(std::move(args)),
+        builtinOp(builtinOp) {}
   IdentifierExpr callee;
   std::vector<std::unique_ptr<Expression>> args;
   std::optional<BuiltinOp> builtinOp;
@@ -137,18 +150,22 @@ class TensorExpr : public Expression {
 public:
   TensorExpr(std::vector<int64_t> shape,
              std::vector<std::unique_ptr<ScalarLiteralExpr>> values)
-      : shape(shape), values(std::move(values)) {}
+      : Expression(ExpressionKind::TensorKind), shape(shape),
+        values(std::move(values)) {}
   std::vector<int64_t> shape;
   std::vector<std::unique_ptr<ScalarLiteralExpr>> values;
   void accept(Visitor &visitor) override;
 };
 
+enum DefinitionKind { Const, Function };
+
 class Definition {
 public:
-  Definition(std::string name) : name(name) {}
+  Definition(std::string name, DefinitionKind kind) : name(name), kind(kind) {}
   const std::string &getName() const { return name; }
   virtual void accept(Visitor &visitor) = 0;
   std::string name;
+  DefinitionKind kind;
   virtual ~Definition() = default;
 };
 
@@ -158,8 +175,9 @@ public:
               std::vector<std::unique_ptr<Statement>> body,
               std::unique_ptr<Expression> returnExpr,
               std::unique_ptr<Type> returnType)
-      : Definition(name), params(std::move(params)), body(std::move(body)),
-        returnExpr(std::move(returnExpr)), returnType(std::move(returnType)) {}
+      : Definition(name, DefinitionKind::Function), params(std::move(params)),
+        body(std::move(body)), returnExpr(std::move(returnExpr)),
+        returnType(std::move(returnType)) {}
   std::vector<Param> params;
   std::vector<std::unique_ptr<Statement>> body;
   std::unique_ptr<Expression> returnExpr;
@@ -170,9 +188,11 @@ public:
 
 class ConstDef : public Definition {
 public:
-  ConstDef(std::string name, int value, std::unique_ptr<Type> type)
-      : Definition(name), value(value), type(std::move(type)) {}
-  int value;
+  ConstDef(std::string name, ScalarLiteralExpr value,
+           std::unique_ptr<Type> type)
+      : Definition(name, DefinitionKind::Const), value(value),
+        type(std::move(type)) {}
+  ScalarLiteralExpr value;
   std::unique_ptr<Type> type;
   void accept(Visitor &visitor) override;
 };

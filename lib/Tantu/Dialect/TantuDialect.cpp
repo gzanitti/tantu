@@ -7,8 +7,8 @@ using namespace ::tantu;
 #include "Tantu/TantuDialect.cpp.inc"
 
 void TantuDialect::initialize() {
-  addOperations<ConstantOp, AddOp, SubOp, MulOp, DivOp, MaxOp, ExpOp, NegOp,
-                AddScalarOp, SubScalarOp, MulScalarOp, DivScalarOp, MaxScalarOp,
-                SumOp, MaxReduceOp, SizeOp, CastOp, TransposeOp, MatmulOp,
-                PrintOp>();
+  addOperations<ConstantOp, TensorLiteralOp, AddOp, SubOp, MulOp, DivOp, MaxOp,
+                ExpOp, NegOp, AddScalarOp, SubScalarOp, MulScalarOp,
+                DivScalarOp, MaxScalarOp, SumOp, MaxReduceOp, SizeOp, CastOp,
+                TransposeOp, MatmulOp, PrintOp>();
 }

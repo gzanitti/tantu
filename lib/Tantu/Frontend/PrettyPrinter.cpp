@@ -12,7 +12,9 @@ void PrettyPrinter::visit(Program &prog) {
 }
 
 void PrettyPrinter::visit(ConstDef &def) {
-  std::cout << "ConstDef(" << def.name << " " << def.value << " : ";
+  std::cout << "ConstDef(" << def.name << " ";
+  def.value.accept(*this);
+  std::cout << " : ";
   def.type->accept(*this);
   std::cout << ")" << std::endl;
 }

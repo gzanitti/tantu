@@ -33,6 +33,24 @@ struct ConstantOpLowering : public OpConversionPattern<::tantu::ConstantOp> {
   }
 };
 
+struct TensorLiteralOpLowering
+    : public OpConversionPattern<::tantu::TensorLiteralOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(::tantu::TensorLiteralOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Location loc = op.getLoc();
+
+    auto tensorLiteralOp =
+        rewriter.create<arith::ConstantOp>(loc, op.getValue());
+
+    rewriter.replaceOp(op, tensorLiteralOp.getResult());
+    return success();
+  }
+};
+
 // Lowering for elementwise operations
 
 struct AddOpLowering : public OpConversionPattern<::tantu::AddOp> {

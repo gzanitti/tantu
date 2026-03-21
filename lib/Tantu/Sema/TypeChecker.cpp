@@ -313,11 +313,15 @@ void TypeChecker::visit(ConstDef &stmt) {
   if (stmt.type->kind == TypeKind::Scalar) {
     auto scalarType = static_cast<ScalarType *>(stmt.type.get());
     auto scalar = context.lookup(scalarType->kind);
+    stmt.value.accept(*this);
+    if (scalar != stmt.value.inferredType) {
+      errors.push_back(
+          "Constant type does not match inferred type. Expected: " +
+          scalar->toString() + ", got: " + stmt.value.inferredType->toString());
+    }
     symbol_table.insert_or_assign(stmt.name, VariableSymbol(scalar));
   } else if (stmt.type->kind == TypeKind::Tensor) {
-    auto tensorType = static_cast<TensorType *>(stmt.type.get());
-    auto tensor = context.lookup(tensorType->shape);
-    symbol_table.insert_or_assign(stmt.name, VariableSymbol(tensor));
+    errors.push_back("Tensors can't be declared as constants");
   }
 }
 
