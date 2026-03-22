@@ -1,0 +1,17 @@
+-- RUN: %tantu --emit-mlir %s | FileCheck %s
+
+const SCALE: f32 = 2;
+
+fn scale_neg(x: tensor<4>) -> tensor<4> {
+  let scaled = mul_scalar(x, SCALE);
+  neg(scaled)
+}
+
+fn caller(x: tensor<4>) -> tensor<4> { scale_neg(x) }
+
+-- CHECK-LABEL: func.func @scale_neg
+-- CHECK: tantu.constant
+-- CHECK: tantu.mul_scalar
+-- CHECK: tantu.neg
+-- CHECK-LABEL: func.func @caller
+-- CHECK: call @scale_neg

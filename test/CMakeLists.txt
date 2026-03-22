@@ -14,7 +14,7 @@ configure_file(
 
 add_custom_target(check-tantu
   COMMAND ${LLVM_LIT} ${CMAKE_CURRENT_BINARY_DIR} -v
-  DEPENDS tantu-opt
+  DEPENDS tantu-opt tantu-compiler
   COMMENT "Running Tantu tests"
 )
 

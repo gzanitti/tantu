@@ -5,7 +5,9 @@ add_library(TantuIRGen
 target_link_libraries(TantuIRGen
     PUBLIC
     TantuFrontend
-    LLVMSupport
+    TantuDialect
+    MLIRFuncDialect
+    MLIR
 )
 
 target_include_directories(TantuIRGen

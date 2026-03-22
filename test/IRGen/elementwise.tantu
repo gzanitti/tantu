@@ -1,0 +1,12 @@
+-- RUN: %tantu --emit-mlir %s | FileCheck %s
+
+fn add_tensors(a: tensor<4>, b: tensor<4>) -> tensor<4> { add(a, b) }
+fn mul_tensors(a: tensor<4>, b: tensor<4>) -> tensor<4> { mul(a, b) }
+fn bias(x: tensor<4>) -> tensor<4> { add_scalar(x, 1.0) }
+
+-- CHECK-LABEL: func.func @add_tensors
+-- CHECK: tantu.add
+-- CHECK-LABEL: func.func @mul_tensors
+-- CHECK: tantu.mul
+-- CHECK-LABEL: func.func @bias
+-- CHECK: tantu.add_scalar

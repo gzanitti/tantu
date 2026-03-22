@@ -661,6 +661,7 @@ populateTantuToLinalgConversionPatterns(RewritePatternSet &patterns,
                                         TypeConverter &typeConverter) {
 
   patterns.add<ConstantOpLowering>(typeConverter, patterns.getContext());
+  patterns.add<TensorLiteralOpLowering>(typeConverter, patterns.getContext());
 
   patterns.add<AddOpLowering>(typeConverter, patterns.getContext());
   patterns.add<SubOpLowering>(typeConverter, patterns.getContext());

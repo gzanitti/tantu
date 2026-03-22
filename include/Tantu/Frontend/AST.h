@@ -202,8 +202,8 @@ public:
   Program(std::vector<std::unique_ptr<Definition>> definitions)
       : defs(std::move(definitions)) {}
   void accept(Visitor &visitor);
-  std::vector<std::unique_ptr<Definition>> definitions() {
-    return std::move(defs);
+  const std::vector<std::unique_ptr<Definition>> &definitions() const {
+    return defs;
   }
 
 private:

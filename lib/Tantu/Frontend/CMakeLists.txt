@@ -7,7 +7,7 @@ add_library(TantuFrontend
 
 target_link_libraries(TantuFrontend
     PUBLIC
-    LLVMSupport
+    LLVM
 )
 
 target_include_directories(TantuFrontend

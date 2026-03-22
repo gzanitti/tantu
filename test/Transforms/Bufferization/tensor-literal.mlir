@@ -5,6 +5,7 @@ func.func @test_tensor_literal_bufferized() -> tensor<3xf32> {
   return %0 : tensor<3xf32>
 }
 
+// CHECK: memref.global {{.*}} : memref<3xf32> = dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]>
 // CHECK-LABEL: func.func @test_tensor_literal_bufferized
-// CHECK: arith.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]>
+// CHECK: memref.get_global
 // CHECK-NOT: tantu.tensor_literal

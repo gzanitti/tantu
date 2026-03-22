@@ -36,6 +36,7 @@ enable_testing()
 add_subdirectory(include/Tantu)
 add_subdirectory(lib/Tantu)
 add_subdirectory(tools/tantu-opt)
+add_subdirectory(tools/tantu-compiler)
 add_subdirectory(test)
 add_subdirectory(examples)
 

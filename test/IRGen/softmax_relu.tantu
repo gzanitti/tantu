@@ -1,0 +1,20 @@
+-- RUN: %tantu --emit-mlir %s | FileCheck %s
+
+fn softmax(x: tensor<8>) -> tensor<8> {
+  let m       = max_reduce(x);
+  let shifted = sub_scalar(x, m);
+  let exps    = exp(shifted);
+  let total   = sum(exps);
+  div_scalar(exps, total)
+}
+
+fn relu(x: tensor<4>) -> tensor<4> { max_scalar(x, 0.0) }
+
+-- CHECK-LABEL: func.func @softmax
+-- CHECK: tantu.max_reduce
+-- CHECK: tantu.sub_scalar
+-- CHECK: tantu.exp
+-- CHECK: tantu.sum
+-- CHECK: tantu.div_scalar
+-- CHECK-LABEL: func.func @relu
+-- CHECK: tantu.max_scalar

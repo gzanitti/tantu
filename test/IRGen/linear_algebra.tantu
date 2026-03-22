@@ -1,0 +1,10 @@
+-- RUN: %tantu --emit-mlir %s | FileCheck %s
+
+fn mm(a: tensor<2,3>, b: tensor<3,4>) -> tensor<2,4> { matmul(a, b) }
+fn tp(x: tensor<4,8>) -> tensor<8,4> { transpose(x, [1, 0]) }
+
+-- CHECK-LABEL: func.func @mm
+-- CHECK: tantu.matmul
+-- CHECK-LABEL: func.func @tp
+-- CHECK: tantu.transpose
+-- CHECK-SAME: perm = [1, 0]

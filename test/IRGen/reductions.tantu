@@ -1,0 +1,9 @@
+-- RUN: %tantu --emit-mlir %s | FileCheck %s
+
+fn total(x: tensor<8>) -> f32 { sum(x) }
+fn peak(x: tensor<8>) -> f32 { max_reduce(x) }
+
+-- CHECK-LABEL: func.func @total
+-- CHECK: tantu.sum
+-- CHECK-LABEL: func.func @peak
+-- CHECK: tantu.max_reduce
