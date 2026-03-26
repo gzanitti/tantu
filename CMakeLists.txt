@@ -41,5 +41,11 @@ add_subdirectory(test)
 add_subdirectory(examples)
 
 
-# Feature flag for future GPU backend — off by default.
 option(TANTU_ENABLE_CUDA "Enable CUDA/GPU backend" OFF)
+
+if(TANTU_ENABLE_CUDA)
+  find_package(CUDAToolkit REQUIRED)
+  message(STATUS "CUDA toolkit found: ${CUDAToolkit_VERSION}")
+  message(STATUS "CUDA include dirs: ${CUDAToolkit_INCLUDE_DIRS}")
+  add_subdirectory(tools/tantu-gpu-runner)
+endif()

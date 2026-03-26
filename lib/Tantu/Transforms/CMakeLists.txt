@@ -15,6 +15,7 @@ add_mlir_library(TantuTransforms
   LowerToLinalg.cpp
   LowerTantuPrint.cpp
   FuseElementwise.cpp
+  AttachNVVMTarget.cpp
   DEPENDS
     TantuTransformsIncGen
     TantuFuseElementwiseIncGen
@@ -27,4 +28,7 @@ add_mlir_library(TantuTransforms
     MLIRTensorDialect
     MLIRMemRefDialect
     MLIRTransforms
+    MLIRGPUDialect
+    MLIRNVVMDialect
+    MLIRNVVMTarget
 )
