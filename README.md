@@ -8,6 +8,7 @@ architectural patterns used in real ML infrastructure work: ODS-based dialect de
 multi-level lowering, bufferization, affine loop optimization, operator fusion via PDL, and AOT
 code generation targeting both CPU and GPU (NVVM/PTX/cubin).
 
+
 # Language Overview
  
 Tantu programs are sequences of pure functions over statically-shaped tensors. There is no
@@ -31,11 +32,12 @@ fn relu(x: tensor<4>) -> tensor<4> {
 }
 ```
 
+
 ## Compiler Architecture
  
 Tantu uses a multi-level lowering pipeline, following the MLIR design philosophy of progressive
 lowering through well-defined abstraction levels. The CPU and GPU paths share a common frontend
-and mid-level IR, diverging at the `linalg` level — the same architecture used by IREE.
+and mid-level IR, diverging at the `linalg` level.
  
 ```
 Tantu source (.tantu)
@@ -56,27 +58,26 @@ Tantu source (.tantu)
         ▼
   linalg + arith + tensor dialects
   ← bifurcation point: CPU vs GPU →
-        │                           │
-        │ --lower-to-cpu            │ --lower-to-gpu
-        │                           │ --lower-to-gpu-opt
-        ▼                           ▼
-  Bufferization (one-shot)    linalg tiling (MLIR API / custom)
-  memref dialect              + gpu dialect
-  LowerTantuPrint pass        → NVVM dialect
-  linalg → affine → scf → cf → PTX → cubin
-  → LLVM dialect                    │
-        │                           ▼
-        ▼                     tantu-gpu-runner
-  mlir-translate               (CUDA driver API:
-  → llc → clang                load cubin, alloc device
-  native executable            memory, H2D copy, launch
-                               kernel, D2H copy, print)
-                                    │
-                                    ▼
-                              benchmarks: CPU vs GPU vs GPU-opt
+        │                                    │
+        │ --lower-to-cpu                     │ --lower-to-gpu / --lower-to-gpu-opt
+        ▼                                    ▼
+  Bufferization (one-shot)            linalg tiling (MLIR API / custom)
+  memref dialect                      gpu dialect
+  LowerTantuPrint pass                NVVM dialect
+  linalg → affine → scf → cf         PTX
+  LLVM dialect                        cubin
+        │                                    │
+        ▼                                    ▼
+  mlir-translate                      tantu-gpu-runner
+  llc                                 (CUDA driver API:
+  clang                                load cubin,
+  native executable                    alloc device memory,
+                                       H2D copy,
+                                       launch kernel,
+                                       D2H copy + print)
+
 ```
 
----
  
 ## Current State
  
@@ -100,7 +101,6 @@ Tantu source (.tantu)
 | Custom tiling pass | 📋 Planned |
 | Benchmarking: CPU vs GPU vs GPU-opt | 📋 Planned |
  
----
  
 ## Dependencies
  
@@ -109,4 +109,3 @@ Tantu source (.tantu)
 - clang (for AOT linking with `-no-pie`)
 - CUDA toolkit (for GPU compilation and `tantu-gpu-runner`)
  
----
