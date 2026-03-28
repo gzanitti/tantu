@@ -25,11 +25,13 @@
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
+#include "llvm/Support/Path.h"
 #endif
 
 namespace cl = llvm::cl;
@@ -125,6 +127,7 @@ int main(int argc, char **argv) {
       gpuPM.addPass(mlir::createReconcileUnrealizedCastsPass());
     }
     pm.addPass(mlir::createGpuModuleToBinaryPass());
+    pm.addPass(mlir::createCanonicalizerPass());
   } else
 #endif
   {
@@ -142,15 +145,79 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-#ifdef TANTU_ENABLE_CUDA
   if (Target == BackendTarget::GPU) {
+    // extract gpu.launch_func metadata
+    mlir::gpu::LaunchFuncOp launchOp;
+    module.walk([&](mlir::gpu::LaunchFuncOp op) { launchOp = op; });
+    if (!launchOp) {
+      llvm::WithColor::error() << "no gpu.launch_func found in module\n";
+      return 1;
+    }
+
+    std::string kernelName = launchOp.getKernelAttr().getLeafReference().str();
+
+    auto getConstVal = [](mlir::Value v) -> int64_t {
+      auto cst = v.getDefiningOp<mlir::arith::ConstantIndexOp>();
+      return cst ? cst.value() : -1;
+    };
+
+    int64_t gridX = getConstVal(launchOp.getGridSizeX());
+    int64_t gridY = getConstVal(launchOp.getGridSizeY());
+    int64_t gridZ = getConstVal(launchOp.getGridSizeZ());
+    int64_t blockX = getConstVal(launchOp.getBlockSizeX());
+    int64_t blockY = getConstVal(launchOp.getBlockSizeY());
+    int64_t blockZ = getConstVal(launchOp.getBlockSizeZ());
+
+    struct KernelArg {
+      int64_t elements;
+    };
+    std::vector<KernelArg> args;
+    for (mlir::Value operand : launchOp.getKernelOperands()) {
+      auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(operand.getType());
+      if (!memrefTy)
+        continue; // skip index operands
+      int64_t elems = 1;
+      for (int64_t dim : memrefTy.getShape())
+        elems *= dim;
+      args.push_back({elems});
+    }
+
+    // write JSON metadata
+    llvm::SmallString<128> jsonPath(OutputFile);
+    llvm::sys::path::replace_extension(jsonPath, "json");
+    {
+      std::error_code ec;
+      llvm::raw_fd_ostream jsonOut(jsonPath, ec);
+      if (ec) {
+        llvm::WithColor::error()
+            << "cannot open metadata file: " << ec.message() << "\n";
+        return 1;
+      }
+      jsonOut << "{\n";
+      jsonOut << "  \"kernel\": \"" << kernelName << "\",\n";
+      jsonOut << "  \"grid\": [" << gridX << ", " << gridY << ", " << gridZ
+              << "],\n";
+      jsonOut << "  \"block\": [" << blockX << ", " << blockY << ", " << blockZ
+              << "],\n";
+      jsonOut << "  \"arguments\": [\n";
+      for (size_t i = 0; i < args.size(); ++i) {
+        jsonOut << "    { \"type\": \"f32\", \"elements\": " << args[i].elements
+                << " }";
+        if (i + 1 < args.size())
+          jsonOut << ",";
+        jsonOut << "\n";
+      }
+      jsonOut << "  ]\n";
+      jsonOut << "}\n";
+    }
+
+    // write cubin
     mlir::gpu::BinaryOp binary;
     module.walk([&](mlir::gpu::BinaryOp op) { binary = op; });
     if (!binary) {
       llvm::WithColor::error() << "no gpu.binary found in module\n";
       return 1;
     }
-
     auto objects = binary.getObjects();
     if (objects.empty()) {
       llvm::WithColor::error() << "gpu.binary has no objects\n";
@@ -158,7 +225,6 @@ int main(int argc, char **argv) {
     }
     auto object = mlir::cast<mlir::gpu::ObjectAttr>(objects[0]);
     llvm::StringRef cubinBytes = object.getObject().getValue();
-
     std::error_code ec;
     llvm::raw_fd_ostream out(OutputFile, ec, llvm::sys::fs::OF_None);
     if (ec) {
@@ -169,7 +235,6 @@ int main(int argc, char **argv) {
     out.write(cubinBytes.data(), cubinBytes.size());
     return 0;
   }
-#endif
 
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
